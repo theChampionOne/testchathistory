@@ -1,55 +1,72 @@
 name: Build complete EDRSR 204-1 corpus
 
 on:
-  pull_request:
+  push:
+    branches: [main]
     paths:
       - ".github/workflows/build-edrsr.yml"
-      - "scripts/**"
+      - "scripts/build_edrsr.py"
       - "requirements.txt"
+      - "triggers/**"
   workflow_dispatch:
-    inputs:
-      limit:
-        description: "0 means full corpus"
-        required: false
-        default: "0"
 
 permissions:
-  contents: read
+  contents: write
+
+env:
+  PYTHONUNBUFFERED: "1"
 
 jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 355
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: pip
-      - run: pip install -r requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
       - name: Download official annual EDRSR archives
         run: |
           set -euo pipefail
           mkdir -p raw outputs
-          curl -fL --retry 12 --retry-all-errors -o raw/edrsr_data_2025.zip "https://data.gov.ua/dataset/2a95ae17-ed46-42ae-ad66-dd9b7a727bb7/resource/9f19ad2b-000f-4176-b283-95e399ad8e5e/download/edrsr_data_2025.zip"
-          curl -fL --retry 12 --retry-all-errors -o raw/edrsr_data_2026.zip "https://data.gov.ua/dataset/16ab7f06-7414-405f-8354-0a492475272d/resource/b1a4ac1c-b17a-4988-8e6d-dedae8b2dd63/download/edrsr_data_2026.zip"
+          curl --fail --location --retry 12 --retry-all-errors \
+            --output raw/edrsr_data_2025.zip \
+            "https://data.gov.ua/dataset/2a95ae17-ed46-42ae-ad66-dd9b7a727bb7/resource/9f19ad2b-000f-4176-b283-95e399ad8e5e/download/edrsr_data_2025.zip"
+          curl --fail --location --retry 12 --retry-all-errors \
+            --output raw/edrsr_data_2026.zip \
+            "https://data.gov.ua/dataset/16ab7f06-7414-405f-8354-0a492475272d/resource/b1a4ac1c-b17a-4988-8e6d-dedae8b2dd63/download/edrsr_data_2026.zip"
           ls -lh raw
           unzip -tq raw/edrsr_data_2025.zip
           unzip -tq raw/edrsr_data_2026.zip
+
       - name: Build SQLite, CSV and compressed full-text corpus
-        env:
-          LIMIT: ${{ github.event.inputs.limit || '0' }}
         run: |
           python scripts/build_edrsr.py \
             --archives raw/edrsr_data_2025.zip raw/edrsr_data_2026.zip \
-            --date-from 2025-08-07 --date-to 2026-08-06 \
-            --workers 12 --limit "$LIMIT" --out outputs
+            --date-from 2025-08-07 \
+            --date-to 2026-08-06 \
+            --workers 12 \
+            --limit 0 \
+            --out outputs
+
       - name: Print summary
         if: always()
         run: |
-          find outputs -maxdepth 1 -type f -printf '%f %s bytes\n' | sort || true
-          cat outputs/summary.json || true
-      - name: Upload corpus
+          find outputs -maxdepth 1 -type f -printf '%f %s bytes\n' 2>/dev/null | sort || true
+          cat outputs/summary.json 2>/dev/null || true
+
+      - name: Upload corpus artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -58,3 +75,34 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
           compression-level: 6
+
+      - name: Publish run pointer
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/edrsr-results
+          mkdir -p /tmp/edrsr-results/latest
+          cat > /tmp/edrsr-results/latest/run.json <<EOF
+          {
+            "run_id": "${GITHUB_RUN_ID}",
+            "run_attempt": "${GITHUB_RUN_ATTEMPT}",
+            "repository": "${GITHUB_REPOSITORY}",
+            "source_sha": "${GITHUB_SHA}",
+            "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "artifact_name": "edrsr-204-1-complete-2025-08-07_2026-08-06"
+          }
+          EOF
+          cp outputs/summary.json /tmp/edrsr-results/latest/summary.json 2>/dev/null || true
+          cp outputs/archive_report.json /tmp/edrsr-results/latest/archive_report.json 2>/dev/null || true
+          cd /tmp/edrsr-results
+          git init
+          git checkout --orphan edrsr-results
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add latest
+          git commit -m "Publish EDRSR corpus run ${GITHUB_RUN_ID}"
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push --force origin HEAD:edrsr-results
