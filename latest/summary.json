@@ -1,0 +1,61 @@
+{
+  "period": [
+    "2025-08-07",
+    "2026-08-06"
+  ],
+  "metadata_candidates": 21367,
+  "processed": 21367,
+  "fetched_ok": 20887,
+  "likely_target": 9,
+  "ukrainian_citizen": 9,
+  "fetch_failed": 480,
+  "countries": {
+    "Не определено": 21359,
+    "Молдова": 4,
+    "Беларусь": 1,
+    "Польша": 3
+  },
+  "outcomes": {
+    "не определено": 21360,
+    "закрыто": 2,
+    "виновен/взыскание": 5
+  },
+  "archives": [
+    {
+      "year": 2025,
+      "total_documents": 8840312,
+      "document_headers": [
+        "doc_id",
+        "court_code",
+        "judgment_code",
+        "justice_kind",
+        "category_code",
+        "cause_num",
+        "adjudication_date",
+        "receipt_date",
+        "judge",
+        "doc_url",
+        "status",
+        "date_publ"
+      ]
+    },
+    {
+      "year": 2026,
+      "total_documents": 5656297,
+      "document_headers": [
+        "doc_id",
+        "court_code",
+        "judgment_code",
+        "justice_kind",
+        "category_code",
+        "cause_num",
+        "adjudication_date",
+        "receipt_date",
+        "judge",
+        "doc_url",
+        "status",
+        "date_publ"
+      ]
+    }
+  ]
+}

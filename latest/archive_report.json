@@ -1,0 +1,38 @@
+[
+  {
+    "year": 2025,
+    "total_documents": 8840312,
+    "document_headers": [
+      "doc_id",
+      "court_code",
+      "judgment_code",
+      "justice_kind",
+      "category_code",
+      "cause_num",
+      "adjudication_date",
+      "receipt_date",
+      "judge",
+      "doc_url",
+      "status",
+      "date_publ"
+    ]
+  },
+  {
+    "year": 2026,
+    "total_documents": 5656297,
+    "document_headers": [
+      "doc_id",
+      "court_code",
+      "judgment_code",
+      "justice_kind",
+      "category_code",
+      "cause_num",
+      "adjudication_date",
+      "receipt_date",
+      "judge",
+      "doc_url",
+      "status",
+      "date_publ"
+    ]
+  }
+]
